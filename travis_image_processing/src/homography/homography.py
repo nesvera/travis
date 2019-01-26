@@ -38,7 +38,7 @@ class Parameters:
         self.screen_points              = dict['screen_points']
         self.world_points               = dict['world_points']
         self.scale_ratio                = dict['scale_ratio']
-        self.homography_matrix          = np.array(dict['Homography_matrix'])
+        self.homography_matrix          = np.array(dict['homography_matrix'])
         self.inverse_homography_matrix  = np.array(dict['inverse_homography_matrix'])
         self.offset_x                   = dict['offset_x']
         self.offset_y                   = dict['offset_y']
@@ -88,6 +88,7 @@ class Homography:
 
         self.parameters.offset_x = offset_x
         self.parameters.offset_y = offset_y
+        self.parameters.afastamento = ratio
         self.parameters.scale_ratio = float(ratio)/self.parameters.afastamento_scale
 
         # if the matrix is already calculated, to it again
@@ -100,15 +101,14 @@ class Homography:
         
         try:
             parameters_dict = pickle.load(file_obj)
-            self.parameters.set(parameters_dict)
         except:
             print("Failed to open pickle file!")
-        
+            return
+
+        self.parameters.set(parameters_dict)
         file_obj.close()
 
     def save_file(self):
-        
-        print(self.file_path)
 
         file_obj = open(self.file_path, 'w')
         class_to_dict = self.parameters.__dict__
@@ -126,9 +126,6 @@ class Homography:
         world_points_np = np.asarray(self.parameters.world_points, dtype="float32")
 
         world_points_np *= self.parameters.scale_ratio
-
-        print(self.parameters.scale_ratio)
-        print(world_points_np)
 
         offset_x = self.parameters.offset_x
         offset_y = self.parameters.offset_y

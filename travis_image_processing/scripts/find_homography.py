@@ -47,9 +47,11 @@ def create_trackbar():
     offset_y = parameters['offset_y']
     afastamento = parameters['afastamento']
 
-    cv2.setTrackbarPos("Offset x",      "Parametros", int(offset_x))
-    cv2.setTrackbarPos("Offset y",      "Parametros", int(offset_y))
+    cv2.setTrackbarPos("Offset x",      "Parametros", int(offset_x + trackbar_offset))
+    cv2.setTrackbarPos("Offset y",      "Parametros", int(offset_y + trackbar_offset))
     cv2.setTrackbarPos("Afastamento",   "Parametros", int(afastamento))
+
+    del parameters
 
 if __name__ == "__main__":
     global homography
@@ -85,7 +87,7 @@ if __name__ == "__main__":
     img_sub = rospy.Subscriber("/camera/image_raw/compressed", CompressedImage, image_callback)
     bridge = CvBridge()
 
-    np.set_printoptions(suppress=True)
+    #np.set_printoptions(suppress=True)
 
     while True:
 
