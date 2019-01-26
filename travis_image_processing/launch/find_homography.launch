@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<launch>
+
+    <arg name="file"
+        default="$(find travis_image_processing)/src/homography/data/homography.json"
+    />
+
+     <!-- Run script -->
+    <node pkg="travis_image_processing" 
+          type="find_homography.py" 
+          name="find_homography" 
+          output="screen"
+          args="$(arg file)"
+    />
+
+
+</launch>
