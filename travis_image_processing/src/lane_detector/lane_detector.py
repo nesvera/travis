@@ -75,7 +75,7 @@ class LaneDetector():
 
         new_image = image.copy()
 
-        '''  
+        
         plt.ion()
 
         for l in range(height):
@@ -87,18 +87,18 @@ class LaneDetector():
 
             plt.plot(line)
             plt.draw()
-            plt.pause(0.5)
+            plt.pause(0.1)
             plt.clf()
             print("caiu")
 
         print("acabou")
         raw_input()
-        '''
+        
 
 
     def process(self, compressed_image):
-        self.filter_param.create_trackbar()
-        self.filter_param.update_trackbar_values()
+        #self.filter_param.create_trackbar()
+        #self.filter_param.update_trackbar_values()
 
         image = self.bridge.compressed_imgmsg_to_cv2(compressed_image, "bgr8")
 
@@ -109,7 +109,7 @@ class LaneDetector():
 
         filtered = self.filter(gray)
 
-        #self.find_lane(filtered)
+        self.find_lane(filtered)
 
         cv2.imshow("image", image)
         cv2.imshow("bird view", filtered)
