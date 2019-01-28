@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
 
-    <arg name="file"
+    <arg name="homography_file"
         default="$(find travis_image_processing)/src/homography/data/homography.json"
     />
 
@@ -10,7 +10,7 @@
           type="find_homography.py" 
           name="find_homography" 
           output="screen"
-          args="$(arg file)"
+          args="$(arg homography_file)"
     />
 
 

@@ -24,5 +24,6 @@ include_directories(
 
 install(PROGRAMS
   src/homography/homography.py
+  src/lane_detector/lane_detector.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

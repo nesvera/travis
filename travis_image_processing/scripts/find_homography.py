@@ -66,8 +66,6 @@ if __name__ == "__main__":
 
     file_path = sys.argv[1]
 
-    print(file_path)
-
     homography = Homography(file_path)
 
     # create trackbar and set values
@@ -104,8 +102,8 @@ if __name__ == "__main__":
             homography_matrix = homography.get_homography_matrix()
 
             if homography_matrix is not None:
-                bird_view = cv2.warpPerspective(original, homography_matrix, (1280, 960))
-                cv2.circle(bird_view, (640, 960), 5, (0,255,0), -1)
+                bird_view = cv2.warpPerspective(original, homography_matrix, (400, 400))
+                cv2.circle(bird_view, (200, 400), 5, (0,255,0), -1)
 
                 cv2.imshow("warped", bird_view)
 
