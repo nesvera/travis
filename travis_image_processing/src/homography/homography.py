@@ -141,3 +141,13 @@ class Homography:
     def get_homography_matrix(self):
         
         return self.parameters.homography_matrix
+
+    def get_inverse_homography_matrix(self):
+
+        return self.parameters.inverse_homography_matrix
+
+    def get_real_coordinate(self, x, y):
+        
+
+
+        return (x, y)

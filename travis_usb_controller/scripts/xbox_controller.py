@@ -20,7 +20,7 @@ def joy_callback(data):
     buttons = data.buttons
 
     left_trigger = data.axes[2]
-    right_trigger = data.axes[5]
+    right_trigger = data.axes[5]-0.134
     left_x_stick = data.axes[0]
 
     forward = (-right_trigger+1)/2.

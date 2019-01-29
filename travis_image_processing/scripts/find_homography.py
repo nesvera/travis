@@ -71,12 +71,21 @@ if __name__ == "__main__":
     # create trackbar and set values
     create_trackbar()
 
+    '''
     # set world points
     world_points = [
         [000.0, 800.0],
         [400.0, 800.0],
         [400.0, 600.0],
         [000.0, 600.0]]
+    '''
+
+    # set world points
+    world_points = [
+        [-200.0, 800.0],
+        [200.0, 800.0],
+        [200.0, 600.0],
+        [-200.0, 600.0]]
 
     homography.set_world_points(world_points)
 
@@ -100,6 +109,7 @@ if __name__ == "__main__":
 
             # bird-view
             homography_matrix = homography.get_homography_matrix()
+            inverse_matrix = homography.get_inverse_homography_matrix()
 
             if homography_matrix is not None:
                 bird_view = cv2.warpPerspective(original, homography_matrix, (400, 400))
