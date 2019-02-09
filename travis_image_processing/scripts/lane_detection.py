@@ -19,7 +19,7 @@ def image_callback(data):
     lane_detector.process(data)
 
 if __name__ == "__main__":
-
+    
     rospy.init_node('lane_detection')
     rospy.loginfo("Starting land_detection.py")
 
@@ -38,3 +38,19 @@ if __name__ == "__main__":
     img_sub = rospy.Subscriber("/camera/image_raw/compressed", CompressedImage, image_callback)
 
     rospy.spin()
+
+    bridge = CvBridge()
+    rate = rospy.Rate(10)
+
+    image = cv2.imread("/home/nesvera/image_test.jpg", cv2.IMREAD_COLOR)
+
+    while True:
+
+        lane_detector.process(image.copy())
+
+        #cv2.imshow("cu", image)
+        #cv2.waitKey(1)
+
+        rate.sleep()
+
+

@@ -23,6 +23,7 @@ class Parameters:
 
         self.homography_matrix = None
         self.inverse_homography_matrix = None
+        self.matrix_to_plane = None
 
         # transform parameters
         self.offset_x = 500
@@ -32,6 +33,7 @@ class Parameters:
         self.afastamento_scale = 500
 
         self.image_size = np.array((1280, 960))
+        self.output_size = np.array((400, 400))
 
     def set(self, dict):
         
@@ -127,16 +129,36 @@ class Homography:
 
         world_points_np *= self.parameters.scale_ratio
 
-        offset_x = self.parameters.offset_x
-        offset_y = self.parameters.offset_y
+        world_points_np += [self.parameters.offset_x, 
+                            self.parameters.offset_y]
 
-        world_points_np += [offset_x, offset_y]
-
-        # 
+        # Calculate matrix for bird view transformation
         self.parameters.homography_matrix = cv2.getPerspectiveTransform(
             screen_points_np,
             world_points_np
         )
+
+        self.parameters.inverse_homography_matrix = np.linalg.inv(self.parameters.homography_matrix)
+
+        # Calculate matrix to find position on plane from pixel
+        
+        backward_world_points = np.zeros((4,2), dtype="float32")
+
+        backward_world_points[0] = self.parameters.world_points[3]
+        backward_world_points[1] = self.parameters.world_points[2]
+        backward_world_points[2] = self.parameters.world_points[1]
+        backward_world_points[3] = self.parameters.world_points[0]
+
+        self.matrix_to_plane = cv2.getPerspectiveTransform(
+            screen_points_np,
+            backward_world_points
+        )
+
+        self.matrix_bird_to_plane = np.matmul(
+            self.matrix_to_plane,
+            self.parameters.inverse_homography_matrix
+        )
+
 
     def get_homography_matrix(self):
         
@@ -147,7 +169,30 @@ class Homography:
         return self.parameters.inverse_homography_matrix
 
     def get_real_coordinate(self, x, y):
-        
+
+        bird_coord = np.array([x, y, 1])
+
+        '''
+        screen_trans = np.matmul(self.parameters.inverse_homography_matrix,
+                              bird_coord)
+
+        screen_coord = np.array([screen_trans[0]/screen_trans[2],
+                               screen_trans[1]/screen_trans[2],
+                               1])        
 
 
-        return (x, y)
+        world_trans = np.matmul(self.matrix_to_plane,
+                                screen_coord)
+
+        world_coord = np.array([world_trans[0]/world_trans[2],
+                                world_trans[1]/world_trans[2]])
+        '''
+
+        world_trans = np.matmul(
+            self.matrix_bird_to_plane,
+            bird_coord
+        )
+
+        world_coord = np.array([world_trans[0]/world_trans[2],
+                                world_trans[1]/world_trans[2]])
+

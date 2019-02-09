@@ -18,7 +18,6 @@ from serial_communication import SerialCommunication
 
 # Callback to send data to arduino
 def drive_callback(data):
-
     serialComm.write(data)
 
 if __name__ == '__main__':

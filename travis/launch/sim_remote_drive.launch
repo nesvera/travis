@@ -1,11 +1,12 @@
 <?xml version="1.0"?>
 <launch>
 
-  <arg name="max_speed" default="0" />
+  <arg name="max_speed" default="1" />
+  <arg name="max_steering" default="1" />
 
   <!-- Start communication with xbox controller -->
   <node pkg="joy" type="joy_node" name="joy_node"/>
   <node pkg="travis_usb_controller" type="xbox_controller.py" name="travis_usb_controller" 
-        args="-m $(arg max_speed)" output="screen"/>
+        args="$(arg max_speed) $(arg max_steering)" output="screen"/>
 
 </launch>

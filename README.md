@@ -11,6 +11,8 @@ How to install:
     
     sudo apt-get install ros-kinetic-joy
 
+    git clone https://github.com/dmalyuta/apriltags2_ros.git
+
     catkin_make install
 
 How to use

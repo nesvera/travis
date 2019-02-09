@@ -23,6 +23,11 @@ def mouse_handler(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONUP:
         homography.add_screen_point(x, y)
 
+def mouse_handler_warped(event, x, y, flags, param):
+
+    if homography_matrix is not None:
+        homography.get_real_coordinate(x, y)
+
 def trackbar_update(arg):
     offset_x = cv2.getTrackbarPos("Offset x", "Parametros") - trackbar_offset
     offset_y = cv2.getTrackbarPos("Offset y", "Parametros") - trackbar_offset
@@ -32,6 +37,9 @@ def trackbar_update(arg):
 def create_trackbar():
     cv2.namedWindow("camera_image")
     cv2.setMouseCallback("camera_image", mouse_handler)
+
+    cv2.namedWindow("warped")
+    cv2.setMouseCallback("warped", mouse_handler_warped)
 
     global trackbar_size, trackbar_offset
     trackbar_size =  1000

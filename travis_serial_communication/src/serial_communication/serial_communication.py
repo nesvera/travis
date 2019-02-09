@@ -36,7 +36,9 @@ class SerialCommunication:
         self.serialComm = serial.Serial()
         self.serialComm.port = '/dev/ttyACM0'
         self.serialComm.baudrate = 115200
-        self.serialComm.timeout = 0.5
+        self.serialComm.timeout = 0.1
+        
+        self.stop = True
 
     def open(self):
 
@@ -47,27 +49,43 @@ class SerialCommunication:
             print("Failed to open serial communication!")
             return False
 
-        if serialComm.is_open == False:
+        if self.serialComm.is_open == False:
             print("Serial port is closed!")
             return False
 
         return True
 
     def read(self):
-        
-        while True:
 
-            receivedMsg = self.serialComm.readline()
-            print(receivedMsg)
-            pass
+        #self.serialComm.reset_input_buffer()
+
+        while True:
+            start = time.time()
+
+            size = 0
+
+            while size < 3:
+                #receivedMsg = self.serialComm.readline()
+                receivedMsg = self.serialComm.read_until('\n')         
+                size = len(receivedMsg)
+            
+
+            p = time.time() -start
+
+            print(p)
+
+
 
     def write(self, data):
         
         speed = float(data.speed)
         steering = float(data.steering_angle)
 
-        print(speed, steering)
-
-        msg = "*&" + str(int(throtle)) + ";" + str(int(steering)) + ";" + str(int(jetsonStop)) + ";*"
+        msg = "*&" + str(throtle) + ";" + str(steering) + ";" + str(self.stop) + ";*"
 
         self.serialComm.write(msg)
+
+    def write_message(self, message):
+
+        self.serialComm.write(message)
+
