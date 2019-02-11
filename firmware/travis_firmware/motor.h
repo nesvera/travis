@@ -12,6 +12,7 @@ class Motor{
     void setAcceleration(float accel_value);
     void setSpeed(float speed_value);
     void stop(void);
+    float getAcceleration(void);
 
   private:
 

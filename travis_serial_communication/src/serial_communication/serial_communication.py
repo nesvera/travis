@@ -34,9 +34,9 @@ class SerialCommunication:
     def __init__(self):
 
         self.serialComm = serial.Serial()
-        self.serialComm.port = '/dev/ttyACM0'
+        self.serialComm.port = '/dev/ttyUSB0'
         self.serialComm.baudrate = 115200
-        self.serialComm.timeout = 0.1
+        self.serialComm.timeout = 4.0
         
         self.stop = True
 
@@ -53,26 +53,29 @@ class SerialCommunication:
             print("Serial port is closed!")
             return False
 
+        self.serialComm.reset_input_buffer()
+
         return True
 
     def read(self):
 
         #self.serialComm.reset_input_buffer()
 
+        receivedMsg = self.serialComm.read_until('*')
+        print(receivedMsg)
+
+        return 
+
         while True:
             start = time.time()
 
             size = 0
 
-            while size < 3:
-                #receivedMsg = self.serialComm.readline()
-                receivedMsg = self.serialComm.read_until('\n')         
-                size = len(receivedMsg)
-            
+            receivedMsg = self.serialComm.read_until('*')
 
             p = time.time() -start
 
-            print(p)
+            print(receivedMsg)
 
 
 

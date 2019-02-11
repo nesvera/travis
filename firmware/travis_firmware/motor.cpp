@@ -15,9 +15,15 @@ Motor::Motor(int pin, int ms_min, int ms_max, int ms_stop){
 
 void Motor::setAcceleration(float accel_value){
 
+  if( accel_value > 0 ){
+    this->acceleration = min(accel_value, 1);
+  }else{
+    this->acceleration = max(accel_value, -1);
+  }
+
   // acceleration range -1 (brake/reverse) -> 1 (forward)
   // multiply for 100 to work with integers
-  int microseconds_value = map((accel_value*100), -100, 100, this->microseconds_min, this->microseconds_max);
+  int microseconds_value = map((this->acceleration*100), -100, 100, this->microseconds_min, this->microseconds_max);
 
   this->motor->writeMicroseconds(microseconds_value);
   
@@ -27,4 +33,7 @@ void Motor::stop(void){
   this->motor->writeMicroseconds(this->microseconds_stop);
 }
 
+float Motor::getAcceleration(void){
+  return this->acceleration;
+}
 

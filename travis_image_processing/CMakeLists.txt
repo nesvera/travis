@@ -16,7 +16,6 @@ set(BUILD_FLAGS "-std=c++11 -Wuninitialized -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BUILD_FLAGS}")
 
 include_directories(SYSTEM ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
-include_directories(include)
 
 add_subdirectory(src/lane_detector)
 
@@ -33,15 +32,6 @@ include_directories(
 
 install(PROGRAMS
   src/homography/homography.py
-  src/lane_detector/lane_detector.py
+  #src/lane_detector/lane_detector.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-
-nstall(DIRECTORY launch/
-   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
-   FILES_MATCHING PATTERN "*.launch" PATTERN "*.machine" PATTERN "*.yaml" PATTERN "*.urdf"
-)
-
-install(DIRECTORY include/${PROJECT_NAME}/
-   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )

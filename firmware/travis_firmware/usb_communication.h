@@ -28,6 +28,8 @@ class UsbCommunication{
     uint32_t in_buffer_index;
 
     bool char_inicial;
+
+    float *data_input;
     
 };
 

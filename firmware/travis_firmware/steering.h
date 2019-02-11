@@ -11,7 +11,7 @@ class Steering{
     Steering(int pin, int ms_min, int ms_max, int ms_stop);
     void setPosition(float position);
     void stop(void);
-    
+    float getPosition(void);
 
   private:
 

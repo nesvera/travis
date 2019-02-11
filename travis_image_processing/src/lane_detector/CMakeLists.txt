@@ -1,9 +1,5 @@
+#add_library(laneDetector SHARED lane_detector.cpp)
+
 add_executable(laneDetector lane_detector.cpp)
 target_link_libraries(laneDetector ${catkin_LIBRARIES})
-#add_dependencies(gpsHemisphereInterface autorally_msgs_gencpp)
-
-install(TARGETS laneDetector
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+add_dependencies(laneDetector travis_image_processing_generate_messages_cpp)
