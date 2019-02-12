@@ -5,6 +5,7 @@ import os
 import matplotlib.pyplot as plt
 import time
 import pickle
+import random
 
 from homography import Homography
 
@@ -22,16 +23,60 @@ class Lane:
     def __init__(self, point, width):
 
         self.points_list = list([point])
-        self.width_list = list(width)
+        self.width_list = list([width])
 
-    def add_point(point, width):
+        self.curve_coef = None
+        self.curve_f = None
+
+    def add_point(self, point, width):
 
         self.points_list.append(point)
         self.width_list.append(width)
 
-    def get_last_point():
+    def get_last_point(self):
 
-        return self.points_list.append[-1]
+        return self.points_list[-1]
+
+    def get_points(self):
+
+        return self.points_list
+
+    def fit_curve(self):
+
+        np_points = np.array(self.points_list)
+
+        x = np_points[:, 0]
+        y = np_points[:, 1]
+
+        self.curve_coef = np.polyfit(y, x, 2)
+        self.curve_f = np.poly1d(self.curve_coef)
+
+    def get_function(self):
+
+        self.fit_curve()
+        return self.curve_f
+
+    def distance_x(self):
+
+        pass
+
+    def distance_y(self):
+
+        # initialize variabels
+        min_point = self.points_list[0]
+        max_point = self.points_list[0]
+
+        for point in self.points_list:
+
+            if point[1] < min_point[1]:
+                min_point = point
+
+            if point[1] > max_point[1]:
+                max_point = point
+        
+        
+        return min_point, max_point
+
 
 
 class LaneDetector():
@@ -76,6 +121,8 @@ class LaneDetector():
         #self.filter_param.create_trackbar()
         #self.filter_param.update_trackbar_values()
 
+        start = time.time()
+
         #image = self.bridge.compressed_imgmsg_to_cv2(compressed_image, "bgr8")
         image = compressed_image
 
@@ -89,7 +136,12 @@ class LaneDetector():
 
         filter_res = self.filter(color_res)
 
-        self.find_lanes(filter_res)
+        self.find_lanes(filter_res.copy())
+
+        periodo = time.time() - start
+        fps = 1/periodo
+
+        print(fps)
 
         # configure parameters mode
         if self.tune_param == 1:
@@ -116,7 +168,7 @@ class LaneDetector():
 
     def filter(self, image):
 
-        ret, thr = cv2.threshold(image, self.filter_param.gray_lower_bound, self.filter_param.gray_upper_bound, cv2.THRESH_BINARY)
+        ret, thr = cv2.threshold(image, self.filter_param.gray_lower_bound, 255, cv2.THRESH_BINARY)
         #ret, thr = cv2.threshold(image, self.filter_param.gray_lower_bound, self.filter_param.gray_upper_bound, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
 
         # talvez aplicar sobel(gradient) + threshould
@@ -127,12 +179,164 @@ class LaneDetector():
 
     def find_lanes(self, image):
 
+        '''
+            top-left = roi_0_x, roi_0_y
+            bot-right = roi_1_x, roi_1_y
+
+
+        '''
+        # image size
+        img_h, img_w = image.shape
+
+        # initial search position y
+        #y_pos_init = self.filter_param.roi_0_y
+        
+        # random initial position of y
+        y_pos_init = random.randint(self.filter_param.roi_0_y, 
+                                    self.filter_param.roi_1_y + 1)
+
+        # get entire horizontal line for the first scan of lanes
+        hor_line = image[y_pos_init, :]
+
+        # list of lanes... lane is a class with points, width ... 
+        lanes_list = []
+
+        # store temporary points for a interesting area of the horizontal search
+        points_found = []
+
+        for index, pixel in enumerate(hor_line):
+
+            if pixel == 255:
+                points_found.append(index)
+
+            elif pixel == 0 and len(points_found) > 0:
+
+                # after to collect all sequence of bright pixels, get the median
+                new_lane_center_point = np.array((int(np.median(points_found)), y_pos_init))
+                points_found = []
+
+                # create a Lane obj and add to the list of lanes
+                lanes_list.append( Lane(new_lane_center_point, len(points_found)) )
+
+        # from the points found in the first search, find all points connected to this lane
+        # using sliding window with a box of fixed size
+        for lane in lanes_list:
+
+            # get last point found of a lane
+            last_point = lane.get_last_point()
+            x_lane_start = last_point[0]
+            y_lane_start = last_point[1]
+
+            # search up
+            x_pos_cur = x_lane_start
+            y_pos_cur = y_lane_start + 1
+
+            points_found = []
+
+            while y_pos_cur >= self.filter_param.roi_0_y:
+
+                x_box_start = x_pos_cur-int(self.filter_param.search_box_w/2)
+                x_box_end = x_pos_cur+int(self.filter_param.search_box_w/2)
+
+                # get pixels from a search box
+                hor_line = image[ y_pos_cur, x_box_start:x_box_end]
+
+                # real index of a hor_line pixel in the image
+                hor_line_image_index = [i for i in range(x_box_start,x_box_end)]
+
+                for index, pixel in enumerate(hor_line):
+
+                    # store bright pixels
+                    if pixel == 255:
+                        points_found.append(index)
+
+                if len(points_found) > 0:
+
+                    lane_center = hor_line_image_index[int(np.median(points_found))]
+
+                    new_lane_point = np.array((lane_center, y_pos_cur))
+                    points_found = []
+                
+                    # append a new point to the list
+                    lane.add_point(new_lane_point, len(points_found))
+
+                    # x start point for the next search
+                    x_pos_cur = lane_center
+
+                    # "feature" existente aqui: como nao tem uma condicao de parada
+                    # quando a linha acabar a baixa continuara procurando seguindo verticalmente
+                    # no ultimo x. Talvez seja bom para a pista com faixa pontilhada, mas talvez
+                    # de problema....
+                    # solucao: caso nao ter nenhum ponto brilhante, subir n posicoes, se nao houver
+                    # um ponto brilhante, acaba
+
+                # move window to the next line
+                y_pos_cur = y_pos_cur - 1
+                
+            # search down
+            x_pos_cur = x_lane_start
+            y_pos_cur = y_lane_start + 1
+
+            points_found = []
+
+            while y_pos_cur <= self.filter_param.roi_1_y:
+
+                x_box_start = x_pos_cur-int(self.filter_param.search_box_w/2)
+                x_box_end = x_pos_cur+int(self.filter_param.search_box_w/2)
+
+                # get pixels from a search box
+                hor_line = image[ y_pos_cur, x_box_start:x_box_end]
+
+                # real index of a hor_line pixel in the image
+                hor_line_image_index = [i for i in range(x_box_start,x_box_end)]
+
+                for index, pixel in enumerate(hor_line):
+
+                    # store bright pixels
+                    if pixel == 255:
+                        points_found.append(index)
+
+                if len(points_found) > 0:
+
+                    lane_center = hor_line_image_index[int(np.median(points_found))]
+
+                    new_lane_point = np.array((lane_center, y_pos_cur))
+                    points_found = []
+                
+                    # append a new point to the list
+                    lane.add_point(new_lane_point, len(points_found))
+
+                    # x start point for the next search
+                    x_pos_cur = lane_center
+
+                    # "feature" existente aqui: como nao tem uma condicao de parada
+                    # quando a linha acabar a baixa continuara procurando seguindo verticalmente
+                    # no ultimo x. Talvez seja bom para a pista com faixa pontilhada, mas talvez
+                    # de problema....
+                    # solucao: caso nao ter nenhum ponto brilhante, subir n posicoes, se nao houver
+                    # um ponto brilhante, acaba
+
+                # move window to the next line
+                y_pos_cur = y_pos_cur + 1
+
+        for lane in lanes_list:
+
+            min_p, max_p = lane.distance_y()
+            f = lane.get_function()
+
+            #for i in range(self.filter_param.roi_0_y, self.filter_param.roi_1_y):
+            for i in range(0, 399):
+                x = int(f(i))
+                y = i
+                cv2.circle(image, (x, y), 3, 255, 1)
+
         cv2.rectangle(image, 
                       (self.filter_param.roi_0_x, self.filter_param.roi_0_y),
                       (self.filter_param.roi_1_x, self.filter_param.roi_1_y),
-                      255, 10)
+                      255, 2)
 
         cv2.imshow("rect", image)
+
 
 class Parameters:
 
@@ -158,6 +362,9 @@ class Parameters:
         self.roi_0_y = 0
         self.roi_1_x = 0
         self.roi_1_y = 0
+
+        self.search_box_w = 8
+        self.search_box_h = 8
 
         self.file = file
 
