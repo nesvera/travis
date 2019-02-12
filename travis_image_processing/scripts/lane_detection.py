@@ -29,7 +29,7 @@ if __name__ == "__main__":
         exit(1)
 
     homography_file = sys.argv[1]
-    filter_file = "/home/nesvera/catkin_ws/src/travis/travis_image_processing/src/lane_detector/data"
+    filter_file = "/home/nesvera/catkin_ws/src/travis/travis_image_processing/src/lane_detector/data/default.travis"
     
 
     global lane_detector
