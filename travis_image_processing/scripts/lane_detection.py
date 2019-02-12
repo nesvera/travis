@@ -29,15 +29,17 @@ if __name__ == "__main__":
         exit(1)
 
     homography_file = sys.argv[1]
+    filter_file = "/home/nesvera/catkin_ws/src/travis/travis_image_processing/src/lane_detector/data"
+    
 
     global lane_detector
-    lane_detector = LaneDetector(homography_file)
+    lane_detector = LaneDetector(homography_file, filter_file, 1)
 
     image = None
 
     img_sub = rospy.Subscriber("/camera/image_raw/compressed", CompressedImage, image_callback)
 
-    rospy.spin()
+    #rospy.spin()
 
     bridge = CvBridge()
     rate = rospy.Rate(10)
@@ -45,7 +47,6 @@ if __name__ == "__main__":
     image = cv2.imread("/home/nesvera/image_test.jpg", cv2.IMREAD_COLOR)
 
     while True:
-
         lane_detector.process(image.copy())
 
         #cv2.imshow("cu", image)

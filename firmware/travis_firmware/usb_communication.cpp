@@ -21,61 +21,6 @@ UsbCommunication::UsbCommunication(HardwareSerial &HWserial, uint32_t baudrate, 
   this->data_input = malloc(NUM_DATA_INPUT*sizeof(float));
 }
 
-/*
-void UsbCommunication::check(void){
-
-  int input_str_size = 0;
-  String input_str;
-  
-  while(input_str_size < 3){
-    input_str = Serial.readStringUntil('\n');
-    input_str_size = input_str.length();
-  }
-
-  int i;
-  for(i=0 ; i<input_str_size; i++){ 
-    char receivedChar = input_str[i];
-  }
-
-  new_data = true;
-  
-  for(i=0 ; i<input_str_size; i++){ 
-    char receivedChar = input_str[i];
-
-    if( receivedChar == '&' ){
-      char_inicial = true;
-      in_buffer_index = 0;
-
-      //Serial.println("1");
-      
-    }else if( receivedChar == '*' ){
-      if( char_inicial == true ){
-        in_buffer_index = 0;
-        new_data = true;
-        char_inicial = false;
-
-        //Serial.println("2");
-        
-        return;
-        
-      }else{
-        in_buffer_index = 0;
-        new_data = false;
-        char_inicial = false;
-
-        //Serial.println("3");
-      }
-
-    }else{
-      in_buffer[in_buffer_index] = receivedChar;
-      in_buffer_index++;
-
-      //Serial.println("4 ");
-    }    
-  }
-}
-*/
-
 void UsbCommunication::check(void){
 
   while( pSerial->available() > 0 ){
