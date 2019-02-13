@@ -38,7 +38,7 @@ class SerialCommunication:
         self.serialComm.baudrate = 115200
         self.serialComm.timeout = 4.0
         
-        self.stop = True
+        self.stop = 0
 
     def open(self):
 
@@ -77,16 +77,14 @@ class SerialCommunication:
 
             print(receivedMsg)
 
-
-
-    def write(self, data):
+    def write_ackermann(self, data):
         
-        speed = float(data.speed)
-        steering = float(data.steering_angle)
+        speed = round(data.speed, 2)
+        steering = round(data.steering_angle, 2)
 
-        msg = "*&" + str(throtle) + ";" + str(steering) + ";" + str(self.stop) + ";*"
+        msg = "&" + str(speed) + ";" + str(steering) + ";" + str(self.stop) + ";*"
 
-        self.serialComm.write(msg)
+        self.write_message(msg)
 
     def write_message(self, message):
 

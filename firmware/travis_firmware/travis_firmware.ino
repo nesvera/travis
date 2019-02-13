@@ -77,10 +77,6 @@ void loop() {
 
     stop_timer = millis();
 
-    while(1){
-      
-    }
-
   // stop vehicle after sometime without receive message from pc
   }else if( millis() - stop_timer > STOP_TIMER_MS ){
     steering->stop();
@@ -100,7 +96,7 @@ void loop() {
      
   usb_comm->writeMessage(output_data);
   
-  delay(10);
+  delay(30);
 
   // reset watchdog
   wdt_reset();

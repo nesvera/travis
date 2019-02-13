@@ -18,7 +18,13 @@ from serial_communication import SerialCommunication
 
 # Callback to send data to arduino
 def drive_callback(data):
-    serialComm.write(data)
+    serialComm.write_ackermann(data)
+
+def routine():
+
+    while True:
+
+        serialComm.read()
 
 if __name__ == '__main__':
     global serialComm
@@ -32,9 +38,9 @@ if __name__ == '__main__':
     if serialComm.open() == False:
         exit(1)
 
-    time.sleep(2)
+    rospy.loginfo("Opened serial communication!")
 
     rospy.Subscriber('/ackermann_cmd', AckermannDrive, drive_callback)
 
     # infinite loop reading data that comes from the microcontroller
-    serialComm.read()   
+    routine()

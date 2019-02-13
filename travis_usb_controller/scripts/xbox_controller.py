@@ -6,10 +6,10 @@ from sensor_msgs.msg import Joy
 from ackermann_msgs.msg import AckermannDrive
 
 import sys
-import sys
+import time
 
 fixed_speed_value = 0
-max_speed = 0
+max_speed = 1
 max_steering = 1
 
 class Controller:
@@ -25,35 +25,62 @@ class Controller:
         self.axes = None
         self.buttons = None
 
+        self.new_data = False
+
     def update(self, data):
 
         self.axes = data.axes
         self.buttons = data.buttons
 
+        # get data from the array
         left_trigger = data.axes[2]
         right_trigger = data.axes[5]
-        left_x_stick = data.axes[0]
+        left_x_stick = -data.axes[0]
 
+        # process throttle
         forward = (-right_trigger+1)/2.
         backward = (-left_trigger+1)/2.
 
-        speed = forward*max_speed
-        steering = left_x_stick*max_steering
+        speed = 0
+        if backward > 0.5:
+            speed = -max(backward, -1)
 
-        print(speed, steering)
+        elif forward > 0.2:
+            speed = min(forward, 1)*max_speed
 
-        ackermann_cmd.speed = float(speed)
-        ackermann_cmd.steering_angle = float(steering)
+        # process steering
+        steering = 0
+        if left_x_stick > 0.4:
+            steering = min(left_x_stick, 1)*max_steering
 
-        new_data = True
+        elif left_x_stick < -0.4:
+            steering = max(left_x_stick, -1)*max_steering
+
+        ackermann_cmd.speed = speed
+        ackermann_cmd.steering_angle = steering
+
+        #print(ackermann_cmd.speed, ackermann_cmd.steering_angle)
+
+        self.new_data = True
 
     def routine(self):
 
-        rate = rospy.Rate(100)
+        rate = rospy.Rate(30)
+
+        timer_start = time.time()
 
         while not rospy.is_shutdown():
             
-            ackermann_pub.publish(ackermann_cmd)
+            if self.new_data or (time.time() - timer_start) < 2:
+                ackermann_pub.publish(ackermann_cmd)
+                #print(ackermann_cmd)
+
+                if self.new_data:
+                    timer_start = time.time()
+
+                self.new_data = False
+
+            rate.sleep()
 
 def joy_callback(data):
     
