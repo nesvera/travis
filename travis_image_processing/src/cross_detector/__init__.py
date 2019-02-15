@@ -1,0 +1,1 @@
+from .cross_detector import CrossDetector
