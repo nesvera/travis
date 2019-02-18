@@ -1,0 +1,4 @@
+uint8 lane_position
+uint8 lane_type
+int32 lane_offset
+float32 lane_curvature
