@@ -5,6 +5,7 @@ import sys
 
 from cv_bridge import CvBridge
 from sensor_msgs.msg import CompressedImage
+from std_msgs.msg import Bool
 
 import numpy as np
 import cv2
@@ -12,11 +13,8 @@ import cv2
 from zebra_detector import ZebraDetector
 
 def image_callback(data):
-
-    # convert received image to BGR
-    #image = bridge.compressed_imgmsg_to_cv2(data, "bgr8")
-
-    zebra_detector.process(data)
+    zebra_status = zebra_detector.process(data)
+    zebra_status_pub.publish(zebra_status)
 
 if __name__ == "__main__":
     
@@ -25,30 +23,26 @@ if __name__ == "__main__":
 
     if len(sys.argv) < 2:
         rospy.loginfo("Error in zebra_detection")
-        rospy.loginfo("Cant find json file!")
+        rospy.loginfo("args 'homography_file' 'filter_file' ")
         exit(1)
 
     homography_file = sys.argv[1]
     filter_file = "/home/nesvera/catkin_ws/src/travis/travis_image_processing/src/zebra_detector/data/default.travis"
-    
+    debug = 1
 
     global zebra_detector
-    zebra_detector = ZebraDetector(homography_file, filter_file, 1)
-
-    image = None
-
-    img_sub = rospy.Subscriber("/camera/image_raw/compressed", CompressedImage, image_callback)
-
-    #rospy.spin()
+    zebra_detector = ZebraDetector(homography_file, filter_file, debug)
 
     bridge = CvBridge()
-    rate = rospy.Rate(10)
 
-    image = cv2.imread("/home/nesvera/image_test.jpg", cv2.IMREAD_COLOR)
+    # Publisher
+    zebra_status_pub = rospy.Publisher("/travis/zebra_status", Bool, queue_size=1)
 
-    while True:
-        zebra_detector.process(image.copy())
+    # Subscriber
+    rospy.Subscriber("/camera/image_raw/compressed", CompressedImage, image_callback)
+    
+    if debug == 1:
+        zebra_detector.debug()
 
-        rate.sleep()
-
-
+    else:
+        rospy.spin()

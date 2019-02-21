@@ -6,10 +6,13 @@ import matplotlib.pyplot as plt
 import time
 import pickle
 import random
+import copy
 
 from homography import Homography
 
 from cv_bridge import CvBridge
+
+from travis_msg.msg import LaneInfo
 
 def nothing(data):
     pass
@@ -23,15 +26,20 @@ class Lane:
     def __init__(self, point, width):
 
         self.points_list = list([point])
-        self.width_list = list([width])
+        self.width_sum = width
 
         self.curve_coef = None
         self.curve_f = None
 
+        self.min_hor = (0,0)
+        self.max_hor = (0,0)
+        self.min_ver = (0,0)
+        self.max_ver = (0,0)
+
     def add_point(self, point, width):
 
         self.points_list.append(point)
-        self.width_list.append(width)
+        self.width_sum += width
 
     def get_last_point(self):
 
@@ -40,6 +48,14 @@ class Lane:
     def get_points(self):
 
         return self.points_list
+    
+    def get_avg_width(self):
+
+        return self.width_sum
+
+    def get_len_point(self):
+
+        return len(self.points_list)
 
     def fit_curve(self):
 
@@ -74,12 +90,23 @@ class Lane:
             if point[1] > max_point[1]:
                 max_point = point
         
-        
-        return min_point, max_point
+        self.min_ver = min_point
+        self.max_ver = max_point
 
+        return np.linalg.norm(max_point-min_point)
 
+    def get_min_vertical(self):
+        return self.min_ver
+
+    def get_max_vertical(self):
+        return self.max_ver
 
 class LaneDetector():
+
+    POS_OFF_ROAD_RIGHT = 0
+    POS_ON_ROAD_RIGHT = 1
+    POS_ON_ROAD_LEFT = 2
+    POS_OFF_ROAD_LEFT = 3
 
     def __init__(self, homography_file, filter_file, tune_param ):
 
@@ -103,68 +130,197 @@ class LaneDetector():
         # configure parameters
         if tune_param:
             self.filter_param.create_trackbar()
-            self.filter_param.load()
-            self.filter_param.set_trackbar_values()
+
+            if os.path.exists(self.filter_file):
+                self.filter_param.load()
+                self.filter_param.set_trackbar_values()
 
         # autonomous mode
         else:
-            self.filter_param.load()
+            if os.path.exists(self.filter_file):
+                self.filter_param.load()
 
-            pass
+            else:
+                print("Filter file doesnt exist")
+                exit(1)
 
         self.init = True
 
         # 
         self.filter_res = 0
+
+        self.image = None
+        self.warp_res = None
+        self.color_res = None
+        self.filter_res = None
+
+        self.lanes_list = None
+
+    def debug(self):
+    
+        while True:
+            try:
+                #os.system('clear')
+
+                #print("Numero de linhas: " + str(len(self.lanes_list)))
+                for i, lane in enumerate(self.lanes_list):
+
+                    distance = lane.distance_y()
+                    #print("--> " + str(i) + " width: " + str(lane.get_avg_width()) + " len: " + str(lane.get_len_point()))
+
+
+                    f = lane.get_function()
+
+                    #for i in range(self.filter_param.roi_0_y, self.filter_param.roi_1_y):
+                    for i in range(0, 399):
+                        x = int(f(i))
+                        y = i
+                        cv2.circle(self.warp_res, (x, y), 3, 255, 1)
+
+                cv2.rectangle(self.warp_res, 
+                                (self.filter_param.roi_0_x, self.filter_param.roi_0_y),
+                                (self.filter_param.roi_1_x, self.filter_param.roi_1_y),
+                                255, 2)
+
+                cv2.imshow("image", self.image)
+                cv2.imshow("warp_res", self.warp_res)
+                cv2.imshow("color_res", self.color_res)
+                cv2.imshow("filter_res", self.filter_res)
+
+                key = cv2.waitKey(1)&0xFF
+
+                if key == ord('q'):
+                    cv2.destroyAllWindows()
+                    break
+
+                elif key == ord('l'):
+                    self.filter_param.load()
+                    self.filter_param.set_trackbar_values()
+
+                elif key == ord('s'):
+                    self.filter_param.save(self.filter_param)
+
+                self.filter_param.update_trackbar_values()
+
+            except:
+                pass
         
     def process(self, compressed_image):
-        #self.filter_param.create_trackbar()
-        #self.filter_param.update_trackbar_values()
 
         start = time.time()
 
-        #image = self.bridge.compressed_imgmsg_to_cv2(compressed_image, "bgr8")
-        image = compressed_image
+        self.image = self.bridge.compressed_imgmsg_to_cv2(compressed_image, "bgr8")
+        self.color_res = cv2.cvtColor(self.image.copy(), cv2.COLOR_BGR2GRAY)
+        self.warp_res = cv2.warpPerspective(self.color_res.copy(), self.homography_matrix, (400, 400))
+        self.filter_res = self.filter(self.warp_res)
+        self.lanes_list = self.find_lanes(self.filter_res.copy())
 
-        #if self.init == True:
-        #    cv2.imwrite("/home/nesvera/image_test.jpg", image)
+        # process found lanes
+        lane_status = LaneInfo()
+        img_h, img_w = self.warp_res.shape
+        img_center_w = img_w/2.0
 
-        warp_res = cv2.warpPerspective(image.copy(), self.homography_matrix, (400, 400))
+        # point to react
+        y_react_point = self.filter_param.roi_1_y
+
+        # delete small lanes
+        for i, lane in enumerate(self.lanes_list):
+            if lane.get_len_point() <= 2:
+                del self.lanes_list[i]
+
+        # 
+        lane_left = None
+        lane_center = None
+        lane_right = None
+
+        num_lanes = len(self.lanes_list)
+
+        if num_lanes == 0:
+            lane_status.lane_type = -1
+            return lane_status
         
-        #color_res = warp_res
-        color_res = cv2.cvtColor(warp_res, cv2.COLOR_BGR2GRAY)  
+        # ONE LANE FOUND
+        elif num_lanes == 1:
+            lane = self.lanes_list[0]
+            lane.distance_y()
 
-        filter_res = self.filter(color_res)
+            min_p = lane.get_min_vertical()
+            max_p = lane.get_max_vertical()
 
-        self.find_lanes(filter_res.copy())
+            print(min_p, max_p)
+
+            m_coef = (max_p[1]-min_p[1])/float((max_p[0]-min_p[0]))
+
+            print("coef: " + str(m_coef))
+
+            '''
+            x_react_point = f(y_react_point)
+
+            # left side, off the road
+            if (img_center_w - x_react_point) >= 0:
+                lane_status.lane_type = 0
+                lane_status.lane_position = self.POS_OFF_ROAD_LEFT
+
+                print("direeeeeeeeeeeeeeeeeeeeeeeita")
+            
+            else:
+                lane_status.lane_type = 0
+                lane_status.lane_position = self.POS_OFF_ROAD_RIGHT
+                print("esqueeeeeeeeeeeeeeeeeeeerda")
+
+            lane_status.lane_offset = -(img_center_w - x_react_point)
+            #calcular curvatura
+            '''
+            
+        # TWO LANES FOUND
+        elif num_lanes == 2:
+            # conferir distancia minima
+            # conferir a distancia entre elas, se for pequeno
+            # eh a do meio e a lateral
+            # se for grande eh as duas laterais
+            print("duuuuuuuuuuuuuuas")
+            pass
+
+        # THREE LANES FOUND
+        elif num_lanes == 3:
+            print("tresssssssssssssss")
+            pass
+
+        else:
+            print("fudeeeeeeeeeeee")
+            pass
+
+
+        # find line with min, max width
+        max_width = self.lanes_list[0].get_avg_width()
+        max_width_index = 0
+
+        min_width = self.lanes_list[0].get_avg_width()
+
+        for i, lane in enumerate(self.lanes_list):
+            if lane.get_avg_width() > max_width:
+                max_width = lane.get_avg_width()
+                max_width_index = i
+
+            if lane.get_avg_width() < min_width:
+                min_width = lane.get_avg_width()
+
+        # detect 1 or 2 way road
+        if (max_width - min_width) < 10:
+            lane_status.lane_type = 1
+
+        else:
+            lane_status.lane_type = 2
+
+        lane_status.lane_position = 0
+        lane_status.lane_offset = 0
+        lane_status.lane_curvature = 0
 
         periodo = time.time() - start
         fps = 1/periodo
+        print("FPS: " + str(fps))
 
-        print(fps)
-
-        # configure parameters mode
-        if self.tune_param == 1:
-
-            cv2.imshow("image", image)
-            cv2.imshow("warp_res", warp_res)
-            cv2.imshow("color_res", color_res)
-            cv2.imshow("filter_res", filter_res)
-
-            key = cv2.waitKey(1)&0xFF
-
-            if key == ord('q'):
-                cv2.destroyAllWindows()
-                exit(1)
-
-            elif key == ord('l'):
-                self.filter_param.load()
-                self.filter_param.set_trackbar_values()
-
-            elif key == ord('s'):
-                self.filter_param.save(self.filter_param)
-
-            self.filter_param.update_trackbar_values()
+        return lane_status
 
     def filter(self, image):
 
@@ -213,10 +369,11 @@ class LaneDetector():
 
                 # after to collect all sequence of bright pixels, get the median
                 new_lane_center_point = np.array((int(np.median(points_found)), y_pos_init))
-                points_found = []
 
                 # create a Lane obj and add to the list of lanes
                 lanes_list.append( Lane(new_lane_center_point, len(points_found)) )
+
+                points_found = []
 
         # from the points found in the first search, find all points connected to this lane
         # using sliding window with a box of fixed size
@@ -229,7 +386,7 @@ class LaneDetector():
 
             # search up
             x_pos_cur = x_lane_start
-            y_pos_cur = y_lane_start + 1
+            y_pos_cur = y_lane_start - self.filter_param.search_box_h
 
             points_found = []
 
@@ -255,13 +412,14 @@ class LaneDetector():
                     lane_center = hor_line_image_index[int(np.median(points_found))]
 
                     new_lane_point = np.array((lane_center, y_pos_cur))
-                    points_found = []
                 
                     # append a new point to the list
                     lane.add_point(new_lane_point, len(points_found))
 
                     # x start point for the next search
                     x_pos_cur = lane_center
+
+                    points_found = []
 
                     # "feature" existente aqui: como nao tem uma condicao de parada
                     # quando a linha acabar a baixa continuara procurando seguindo verticalmente
@@ -270,12 +428,16 @@ class LaneDetector():
                     # solucao: caso nao ter nenhum ponto brilhante, subir n posicoes, se nao houver
                     # um ponto brilhante, acaba
 
+                # if not was found following the lane
+                else:
+                    break
+
                 # move window to the next line
-                y_pos_cur = y_pos_cur - 1
+                y_pos_cur = y_pos_cur - self.filter_param.search_box_h
                 
             # search down
             x_pos_cur = x_lane_start
-            y_pos_cur = y_lane_start + 1
+            y_pos_cur = y_lane_start + self.filter_param.search_box_h
 
             points_found = []
 
@@ -301,13 +463,14 @@ class LaneDetector():
                     lane_center = hor_line_image_index[int(np.median(points_found))]
 
                     new_lane_point = np.array((lane_center, y_pos_cur))
-                    points_found = []
                 
                     # append a new point to the list
                     lane.add_point(new_lane_point, len(points_found))
 
                     # x start point for the next search
                     x_pos_cur = lane_center
+
+                    points_found = []
 
                     # "feature" existente aqui: como nao tem uma condicao de parada
                     # quando a linha acabar a baixa continuara procurando seguindo verticalmente
@@ -316,26 +479,14 @@ class LaneDetector():
                     # solucao: caso nao ter nenhum ponto brilhante, subir n posicoes, se nao houver
                     # um ponto brilhante, acaba
 
+                # if not was found following the lane
+                else:
+                    break
+
                 # move window to the next line
-                y_pos_cur = y_pos_cur + 1
+                y_pos_cur = y_pos_cur + self.filter_param.search_box_h
 
-        for lane in lanes_list:
-
-            min_p, max_p = lane.distance_y()
-            f = lane.get_function()
-
-            #for i in range(self.filter_param.roi_0_y, self.filter_param.roi_1_y):
-            for i in range(0, 399):
-                x = int(f(i))
-                y = i
-                cv2.circle(image, (x, y), 3, 255, 1)
-
-        cv2.rectangle(image, 
-                      (self.filter_param.roi_0_x, self.filter_param.roi_0_y),
-                      (self.filter_param.roi_1_x, self.filter_param.roi_1_y),
-                      255, 2)
-
-        cv2.imshow("rect", image)
+        return lanes_list
 
 
 class Parameters:
@@ -363,8 +514,8 @@ class Parameters:
         self.roi_1_x = 0
         self.roi_1_y = 0
 
-        self.search_box_w = 8
-        self.search_box_h = 8
+        self.search_box_w = 20
+        self.search_box_h = 10
 
         self.file = file
 
@@ -406,6 +557,7 @@ class Parameters:
 
     def set_trackbar_values(self):
 
+        cv2.namedWindow("filter", cv2.WINDOW_NORMAL)
         cv2.setTrackbarPos("gray_lower_bound", "filter", self.gray_lower_bound)
         cv2.setTrackbarPos("gray_upper_bound", "filter", self.gray_upper_bound)
         cv2.setTrackbarPos("h_min", "filter", self.h_min)

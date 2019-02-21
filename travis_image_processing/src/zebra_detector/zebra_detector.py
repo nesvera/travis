@@ -10,6 +10,7 @@ import random
 from homography import Homography
 
 from cv_bridge import CvBridge
+from std_msgs.msg import Bool
 
 def nothing(data):
     pass
@@ -121,55 +122,71 @@ class ZebraDetector():
 
         # 
         self.filter_res = 0
+
+        self.image = None
+        self.warp_res = None
+        self.color_res = None
+        self.filter_res = None
+    
+    def debug(self):
+    
+        while True:
+            try:
+
+                cv2.rectangle(self.color_res, 
+                                (self.filter_param.roi_0_x, self.filter_param.roi_0_y),
+                                (self.filter_param.roi_1_x, self.filter_param.roi_1_y),
+                                255, 2)
+
+                cv2.imshow("image", self.image)
+                cv2.imshow("warp_res", self.warp_res)
+                cv2.imshow("color_res", self.color_res)
+                cv2.imshow("filter_res", self.filter_res)
+
+                key = cv2.waitKey(1)&0xFF
+
+                if key == ord('q'):
+                    cv2.destroyAllWindows()
+                    break
+
+                elif key == ord('l'):
+                    self.filter_param.load()
+                    self.filter_param.set_trackbar_values()
+
+                elif key == ord('s'):
+                    self.filter_param.save(self.filter_param)
+
+                self.filter_param.update_trackbar_values()
+
+            except:
+                pass
+
         
     def process(self, compressed_image):
-        #self.filter_param.create_trackbar()
-        #self.filter_param.update_trackbar_values()
 
         start = time.time()
 
-        #image = self.bridge.compressed_imgmsg_to_cv2(compressed_image, "bgr8")
-        image = compressed_image
+        self.image = self.bridge.compressed_imgmsg_to_cv2(compressed_image, "bgr8")
 
-        #if self.init == True:
-        #    cv2.imwrite("/home/nesvera/image_test.jpg", image)
-
-        warp_res = cv2.warpPerspective(image.copy(), self.homography_matrix, (400, 400))
+        self.warp_res = cv2.warpPerspective(self.image.copy(), self.homography_matrix, (400, 400))
         
-        #color_res = warp_res
-        color_res = cv2.cvtColor(warp_res, cv2.COLOR_BGR2GRAY)  
+        self.color_res = cv2.cvtColor(self.warp_res, cv2.COLOR_BGR2GRAY)  
 
-        filter_res = self.filter(color_res)
+        self.filter_res = self.filter(self.color_res)
 
-        self.find_lanes(filter_res.copy())
+        lanes = self.find_lanes(self.filter_res.copy())
+
+        zebra_status = False
+
+        if len(lanes) > 5:
+            zebra_status = True
 
         periodo = time.time() - start
         fps = 1/periodo
-
         print(fps)
 
-        # configure parameters mode
-        if self.tune_param == 1:
-
-            cv2.imshow("image", image)
-            cv2.imshow("warp_res", warp_res)
-            cv2.imshow("color_res", color_res)
-            cv2.imshow("filter_res", filter_res)
-
-            key = cv2.waitKey(1)&0xFF
-
-            if key == ord('q'):
-                cv2.destroyAllWindows()
-                exit(1)
-
-            elif key == ord('l'):
-                self.filter_param.load()
-                self.filter_param.set_trackbar_values()
-
-            elif key == ord('s'):
-                self.filter_param.save(self.filter_param)
-
-            self.filter_param.update_trackbar_values()
+        return zebra_status
+            
 
     def filter(self, image):
 
@@ -194,13 +211,13 @@ class ZebraDetector():
         img_h, img_w = image.shape
 
         # initial search position y
-        #y_pos_init = self.filter_param.roi_0_y
+        y_pos_init = self.filter_param.roi_0_y
         
         # random initial position of y
         #y_pos_init = random.randint(self.filter_param.roi_0_y, 
         #                            self.filter_param.roi_1_y + 1)
 
-        y_pos_init = int((self.filter_param.roi_0_y + self.filter_param.roi_1_y)/2)
+        #y_pos_init = int((self.filter_param.roi_0_y + self.filter_param.roi_1_y)/2)
 
         # get entire horizontal line for the first scan of lanes
         hor_line = image[y_pos_init, :]
@@ -236,7 +253,7 @@ class ZebraDetector():
 
             # search up
             x_pos_cur = x_lane_start
-            y_pos_cur = y_lane_start + 1
+            y_pos_cur = y_lane_start - 1
 
             points_found = []
 
@@ -278,7 +295,7 @@ class ZebraDetector():
                     # um ponto brilhante, acaba
 
                 # move window to the next line
-                y_pos_cur = y_pos_cur - 1
+                y_pos_cur = y_pos_cur - 10
                 
             # search down
             x_pos_cur = x_lane_start
@@ -324,9 +341,11 @@ class ZebraDetector():
                     # um ponto brilhante, acaba
 
                 # move window to the next line
-                y_pos_cur = y_pos_cur + 1
+                y_pos_cur = y_pos_cur + 10
 
-        print(len(lanes_list))
+        #print(len(lanes_list))
+
+        return lanes_list
 
         '''
         for lane in lanes_list:
@@ -339,15 +358,9 @@ class ZebraDetector():
                 x = int(f(i))
                 y = i
                 cv2.circle(image, (x, y), 3, 255, 1)
+        
         '''
-
-        cv2.rectangle(image, 
-                      (self.filter_param.roi_0_x, self.filter_param.roi_0_y),
-                      (self.filter_param.roi_1_x, self.filter_param.roi_1_y),
-                      255, 2)
-
-        cv2.imshow("rect", image)
-
+        
 
 class Parameters:
 

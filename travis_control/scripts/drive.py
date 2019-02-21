@@ -12,22 +12,28 @@ from pid import PID
 class Control:
 
     FSM_INIT    = 0
-    FSM_DRIVE   = 1
-    FSM_RACE    = 2
+    FSM_1_WAY   = 1
+    FSM_2_WAY   = 2
     FSM_CROSS   = 3
     FSM_ZEBRA   = 4
     FSM_OBJECT  = 5
 
+    STOP        = -1
+    DRIVE       = 0
+    RACE        = 1
+
     def __init__(self):
 
-        self.cross_status       = None
-        self.lane_status        = deque(maxlen=30)
+        self.cross_status       = deque(maxlen=30)
+        self.lane_status        = None
+        self.lane_type          = deque(maxlen=10)
         self.object_status      = deque(maxlen=30)
         self.sign_status        = []
         self.zebra_status       = deque(maxlen=30)
         self.joystick_status    = None
 
-        self.current_state = 0  
+        self.current_style = self.STOP
+        self.current_state = self.FSM_INIT
 
     def routine(self):
 
@@ -36,25 +42,52 @@ class Control:
         # state machine
         while True:
 
-            if self.current_state == FSM_INIT:
+            if self.current_state == self.FSM_INIT:
+                
+                # esperando clicar botoes do controle para ativar carrinho
+
                 pass
             
-            elif self.current_state == FSM_DRIVE:
-                pass
+            elif self.current_state == self.FSM_1_WAY:
 
-            elif self.current_state == FSM_RACE:
-                pass
+                self.drive_1_way()
+
+
+            elif self.current_state == self.FSM_2_WAY:
+
+                self.drive_2_way()
+
             
-            elif self.current_state == FSM_CROSS:
-                pass
+            elif self.current_state == self.FSM_CROSS:
 
-            elif self.current_state == FSM_ZEBRA:
-                pass
+                self.cross_handler()
 
-            elif self.current_state == FSM_OBJECT:
-                pass
+
+            elif self.current_state == self.FSM_ZEBRA:
+
+                self.zebra_handler()
+
+
+            elif self.current_state == self.FSM_OBJECT:
+
+                self.object_handler()
 
             rate.sleep()
+
+    def drive_1_way(self):
+        pass
+
+    def drive_2_way(self):
+        pass
+
+    def cross_handler(self):
+        pass
+
+    def zebra_handler(self):
+        pass
+
+    def  object_handler(self):
+        pass
 
     def cross_detection_update(self, data):
         self.cross_status = data

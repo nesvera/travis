@@ -5,6 +5,7 @@ import sys
 
 from cv_bridge import CvBridge
 from sensor_msgs.msg import CompressedImage
+from travis_msg.msg import LaneInfo
 
 import numpy as np
 import cv2
@@ -12,11 +13,9 @@ import cv2
 from lane_detector import LaneDetector
 
 def image_callback(data):
+    lane_status = lane_detector.process(data)
 
-    # convert received image to BGR
-    #image = bridge.compressed_imgmsg_to_cv2(data, "bgr8")
-
-    lane_detector.process(data)
+    print(lane_status.lane_offset)
 
 if __name__ == "__main__":
     
@@ -25,33 +24,27 @@ if __name__ == "__main__":
 
     if len(sys.argv) < 2:
         rospy.loginfo("Error in lane_detection")
-        rospy.loginfo("Cant find json file!")
+        rospy.loginfo("args 'homography_file' 'filter_file' ")
         exit(1)
 
     homography_file = sys.argv[1]
     filter_file = "/home/nesvera/catkin_ws/src/travis/travis_image_processing/src/lane_detector/data/default.travis"
-    
+    debug = 1
 
     global lane_detector
-    lane_detector = LaneDetector(homography_file, filter_file, 1)
-
-    image = None
-
-    img_sub = rospy.Subscriber("/camera/image_raw/compressed", CompressedImage, image_callback)
-
-    #rospy.spin()
+    lane_detector = LaneDetector(homography_file, filter_file, debug)
 
     bridge = CvBridge()
-    rate = rospy.Rate(10)
 
-    image = cv2.imread("/home/nesvera/image_test.jpg", cv2.IMREAD_COLOR)
+    # Publisher
+    lane_status_pub = rospy.Publisher("/travis/lane_info", LaneInfo, queue_size=1)
 
-    while True:
-        lane_detector.process(image.copy())
+    # Subscriber
+    rospy.Subscriber("/camera/image_raw/compressed", CompressedImage, image_callback)
 
-        #cv2.imshow("cu", image)
-        #cv2.waitKey(1)
+    if debug == 1:
+        lane_detector.debug()
 
-        rate.sleep()
-
+    else:
+        rospy.spin()
 
