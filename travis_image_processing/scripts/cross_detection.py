@@ -29,7 +29,8 @@ if __name__ == "__main__":
         exit(1)
 
     homography_file = sys.argv[1]
-    filter_file = "/home/nesvera/catkin_ws/src/travis/travis_image_processing/src/cross_detector/data/default.travis"
+    #filter_file = "/home/nesvera/catkin_ws/src/travis/travis_image_processing/src/cross_detector/data/default.travis"
+    filter_file = "/home/nesvera/catkin_ws/src/travis/travis_image_processing/src/cross_detector/data/cross.travis"
     
 
     global cross_detector

@@ -10,6 +10,7 @@
         args="$(arg max_speed) $(arg max_steering)" output="screen" />
   <node pkg="travis_serial_communication" type="serial_comm.py" name="travis_serial_communication"
         output="screen" />
-  <node pkg="usb_cam" type="travis_cam.launch" name="travis_cam" />
+
+  <include file="$(find usb_cam)/launch/travis_cam.launch"/>
 
 </launch>

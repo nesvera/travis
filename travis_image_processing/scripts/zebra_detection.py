@@ -23,11 +23,12 @@ if __name__ == "__main__":
 
     if len(sys.argv) < 2:
         rospy.loginfo("Error in zebra_detection")
-        rospy.loginfo("args 'homography_file' 'filter_file' ")
+        rospy.loginfo("args 'homography_file' 'filter_file' 'debug'")
         exit(1)
 
     homography_file = sys.argv[1]
-    filter_file = "/home/nesvera/catkin_ws/src/travis/travis_image_processing/src/zebra_detector/data/default.travis"
+    #filter_file = "/home/nesvera/catkin_ws/src/travis/travis_image_processing/src/zebra_detector/data/default.travis"
+    filter_file = "/home/taura/catkin_ws/src/travis/travis_image_processing/src/zebra_detector/data/zebra.travis"
     debug = 1
 
     global zebra_detector
@@ -40,9 +41,4 @@ if __name__ == "__main__":
 
     # Subscriber
     rospy.Subscriber("/camera/image_raw/compressed", CompressedImage, image_callback)
-    
-    if debug == 1:
-        zebra_detector.debug()
-
-    else:
-        rospy.spin()
+      

@@ -171,11 +171,11 @@ class LaneDetector():
 
                     f = lane.get_function()
 
-                    #for i in range(self.filter_param.roi_0_y, self.filter_param.roi_1_y):
-                    for i in range(0, 399):
-                        x = int(f(i))
-                        y = i
-                        cv2.circle(self.warp_res, (x, y), 3, 255, 1)
+                    for j in range(self.filter_param.roi_0_y, self.filter_param.roi_1_y):
+                    #for j in range(0, 399):
+                        x = int(f(j))
+                        y = j
+                        cv2.circle(self.warp_res, (x, y), 3, 0, 1)
 
                 cv2.rectangle(self.warp_res, 
                                 (self.filter_param.roi_0_x, self.filter_param.roi_0_y),
@@ -210,126 +210,175 @@ class LaneDetector():
         start = time.time()
 
         self.image = self.bridge.compressed_imgmsg_to_cv2(compressed_image, "bgr8")
+        #self.image = compressed_image.copy()
         self.color_res = cv2.cvtColor(self.image.copy(), cv2.COLOR_BGR2GRAY)
-        self.warp_res = cv2.warpPerspective(self.color_res.copy(), self.homography_matrix, (400, 400))
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        contrast = clahe.apply(self.color_res)
+
+        self.warp_res = cv2.warpPerspective(contrast, self.homography_matrix, (400, 400))
         self.filter_res = self.filter(self.warp_res)
-        self.lanes_list = self.find_lanes(self.filter_res.copy())
+        self.lanes_list = self.find_lanes(self.filter_res.copy())   
 
-        # process found lanes
-        lane_status = LaneInfo()
-        img_h, img_w = self.warp_res.shape
-        img_center_w = img_w/2.0
-
-        # point to react
-        y_react_point = self.filter_param.roi_1_y
+        good_lanes = []
 
         # delete small lanes
-        for i, lane in enumerate(self.lanes_list):
-            if lane.get_len_point() <= 2:
-                del self.lanes_list[i]
+        for lane in self.lanes_list:
 
-        # 
-        lane_left = None
-        lane_center = None
-        lane_right = None
+            if lane.get_len_point() > 15:
+                good_lanes.append(lane)
+
+        self.lanes_list = good_lanes
+
+        # classify the road
+        lane_status = LaneInfo()
+        img_h, img_w = self.warp_res.shape
+        img_w_center = img_w/2.0
+        y_react_point = self.filter_param.roi_1_y
 
         num_lanes = len(self.lanes_list)
-
         if num_lanes == 0:
-            lane_status.lane_type = -1
+            lane_status.lane_type = 0
             return lane_status
-        
-        # ONE LANE FOUND
+
         elif num_lanes == 1:
+            lane_status.lane_type = 255
+
             lane = self.lanes_list[0]
             lane.distance_y()
 
-            min_p = lane.get_min_vertical()
-            max_p = lane.get_max_vertical()
+            max_p = lane.get_min_vertical()
+            min_p = lane.get_max_vertical()
 
-            print(min_p, max_p)
+            #print(min_p, max_p)
 
-            m_coef = (max_p[1]-min_p[1])/float((max_p[0]-min_p[0]))
+            m_coef = -(min_p[1]-max_p[1])/float((min_p[0]-max_p[0]))
+            angle = np.arctan(m_coef)*180/np.pi
 
-            print("coef: " + str(m_coef))
+            #print(min_p, max_p)
+            print("angle: " + str(angle))
+            #raw_input()
 
-            '''
-            x_react_point = f(y_react_point)
+            x_react_point = min_p[0]
+            y_react_point = max_p[1]
+
+            #print(x_react_point, y_react_point)
+            #print(img_w_center-x_react_point)
 
             # left side, off the road
-            if (img_center_w - x_react_point) >= 0:
+            if angle <= 80 and angle >= 0:
+               
                 lane_status.lane_type = 0
-                lane_status.lane_position = self.POS_OFF_ROAD_LEFT
+
+                s_angle = 90 - angle
+                s_offset = 80 - (img_w_center-x_react_point)
+                
+                lane_status.lane_curvature = s_angle
+                lane_status.lane_offset = s_angle + s_offset
+
+                print(lane_status.lane_offset)
 
                 print("direeeeeeeeeeeeeeeeeeeeeeeita")
             
-            else:
+            elif  angle >= -80 and angle <= 0:
                 lane_status.lane_type = 0
-                lane_status.lane_position = self.POS_OFF_ROAD_RIGHT
+
+                s_angle = -(90 + angle)
+                s_offset = -(60 + (img_w_center-x_react_point))
+
+                lane_status.lane_curvature = s_angle
+                lane_status.lane_offset = s_angle + s_offset
+
+                print(lane_status.lane_offset)
+
                 print("esqueeeeeeeeeeeeeeeeeeeerda")
 
-            lane_status.lane_offset = -(img_center_w - x_react_point)
-            #calcular curvatura
-            '''
-            
-        # TWO LANES FOUND
+            else:
+
+                print("reeeeeto")
+                pass
+
         elif num_lanes == 2:
-            # conferir distancia minima
-            # conferir a distancia entre elas, se for pequeno
-            # eh a do meio e a lateral
-            # se for grande eh as duas laterais
-            print("duuuuuuuuuuuuuuas")
-            pass
-
-        # THREE LANES FOUND
-        elif num_lanes == 3:
-            print("tresssssssssssssss")
-            pass
-
-        else:
-            print("fudeeeeeeeeeeee")
-            pass
-
-
-        # find line with min, max width
-        max_width = self.lanes_list[0].get_avg_width()
-        max_width_index = 0
-
-        min_width = self.lanes_list[0].get_avg_width()
-
-        for i, lane in enumerate(self.lanes_list):
-            if lane.get_avg_width() > max_width:
-                max_width = lane.get_avg_width()
-                max_width_index = i
-
-            if lane.get_avg_width() < min_width:
-                min_width = lane.get_avg_width()
-
-        # detect 1 or 2 way road
-        if (max_width - min_width) < 10:
             lane_status.lane_type = 1
 
-        else:
+            angle_list = []
+            x_lane_position = 0
+
+            for lane in self.lanes_list:
+                lane.distance_y()
+
+                f = lane.get_function()
+                x_lane_position += f(self.filter_param.roi_1_y)
+
+                max_p = lane.get_min_vertical()
+                min_p = lane.get_max_vertical()
+
+                #print(min_p, max_p)
+
+                m_coef = -(min_p[1]-max_p[1])/float((min_p[0]-max_p[0]))
+                angle = np.arctan(m_coef)*180/np.pi
+
+                angle_list.append(abs(angle))
+
+            lane_status.lane_curvature = min(angle_list)
+            lane_status.lane_offset = ((x_lane_position)/2.0) - img_w_center
+
+            print(lane_status.lane_offset)
+
+        elif num_lanes == 3:
             lane_status.lane_type = 2
 
-        lane_status.lane_position = 0
-        lane_status.lane_offset = 0
-        lane_status.lane_curvature = 0
+            good_lanes = []
+
+            for i in range(len(self.lanes_list)-1):
+
+                f1 = self.lanes_list[i].get_function()
+                f2 = self.lanes_list[i+1].get_function()
+
+                if abs(f1(self.filter_param.roi_1_y) - f2(self.filter_param.roi_1_y)) > 10:
+                    good_lanes.append(self.lanes_list[i])
+
+            good_lanes.append(self.lanes_list[-1])  
+
+            angle_list = []
+            x_lane_position = 0
+
+            for lane in good_lanes:
+                lane.distance_y()
+
+                f = lane.get_function()
+                x_lane_position += f(self.filter_param.roi_1_y)
+
+                max_p = lane.get_min_vertical()
+                min_p = lane.get_max_vertical()
+
+                #print(min_p, max_p)
+
+                m_coef = -(min_p[1]-max_p[1])/float((min_p[0]-max_p[0]))
+                angle = np.arctan(m_coef)*180/np.pi
+
+                angle_list.append(abs(angle))
+
+            lane_status.lane_curvature = min(angle_list)
+            lane_status.lane_offset = ((x_lane_position)/2.0) - img_w_center
+
+            print(lane_status.lane_offset)                  
+
+
+        elif num_lanes == 4:
+            lane_status.lane_type = 2
+                        
 
         periodo = time.time() - start
         fps = 1/periodo
-        print("FPS: " + str(fps))
+        #print("FPS: " + str(fps))
 
-        return lane_status
+            
 
     def filter(self, image):
 
         ret, thr = cv2.threshold(image, self.filter_param.gray_lower_bound, 255, cv2.THRESH_BINARY)
-        #ret, thr = cv2.threshold(image, self.filter_param.gray_lower_bound, self.filter_param.gray_upper_bound, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-
-        # talvez aplicar sobel(gradient) + threshould
-
-        filtered = thr
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
+        filtered = cv2.morphologyEx(thr, cv2.MORPH_OPEN, kernel)
 
         return filtered
 
@@ -514,8 +563,8 @@ class Parameters:
         self.roi_1_x = 0
         self.roi_1_y = 0
 
-        self.search_box_w = 20
-        self.search_box_h = 10
+        self.search_box_w = 50
+        self.search_box_h = 5
 
         self.file = file
 
@@ -606,3 +655,64 @@ class Parameters:
         class_to_dict = obj.__dict__
         pickle.dump(class_to_dict, file_obj, pickle.HIGHEST_PROTOCOL)
         file_obj.close()
+
+
+'''
+p2 = np.polyder(f)
+            p3 = np.polyder(p2)
+
+            point = (self.filter_param.roi_1_y+self.filter_param.roi_0_y)/2.0
+
+            radius = ((1+(p2(point))**2)**(3/2.))/abs(p3(point))
+
+            #for j in range(self.filter_param.roi_0_y, self.filter_param.roi_1_y):
+            #    x = int(f(j))
+            #    y = j
+            #    cv2.circle(self.warp_res, (x, y), 3, 255, 1)
+
+            points = lane.get_points()
+
+            for p in points:
+                cv2.circle(self.warp_res, (p[0], p[1]), 3, 0, 1)    
+                pass
+
+            cv2.rectangle(self.warp_res, 
+                            (self.filter_param.roi_0_x, self.filter_param.roi_0_y),
+                            (self.filter_param.roi_1_x, self.filter_param.roi_1_y),
+                            255, 2)
+
+            p1 = np.array((f(self.filter_param.roi_1_y), 
+                          (self.filter_param.roi_1_y)))
+            
+            mid_y = random.randint(self.filter_param.roi_0_y, 
+                                    self.filter_param.roi_1_y + 1)
+            p2 = np.array((f((mid_y)/2), 
+                  ((mid_y)/2)))
+            
+            p3 = np.array((f(self.filter_param.roi_0_y), 
+                          (self.filter_param.roi_0_y)))
+
+            #cv2.circle(self.warp_res, p2, 3, 0, 1) 
+            d_x1 = (p2[1]-p1[1])
+            d_y1 = float(p2[0]-p1[0]) if float(p2[0]-p1[0]) != 0 else 0.0000001 
+            m1 = d_x1/d_y1
+
+            d_x2 = (p3[1]-p2[1])
+            d_y2 = float(p3[0]-p2[0]) if float(p3[0]-p2[0]) != 0 else 0.0000001 
+            m2 = d_x2/d_y2
+
+            dx_dy = (m1+m2)/2.0
+
+            x_mid1 = (p2[0]+p1[0])/2.0
+            x_mid2 = (p3[0]+p2[0])/2.0
+
+            delta_x_mid = float(x_mid1-x_mid2) if float(x_mid1-x_mid2) != 0 else 0.0000001
+
+            dx2_dy2 = (m2-m1)/delta_x_mid
+
+            #adius = ((1+(dx_dy)**2)**(3/2.0))/abs(dx2_dy2)
+
+            #print(p1, p2, p3)
+            #print(m1, m2)
+            print(radius)
+'''
