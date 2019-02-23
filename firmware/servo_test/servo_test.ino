@@ -21,7 +21,7 @@ void loop() {
 
   int pos;
   for(pos = 1448; pos < 1676; pos++){
-    steering.writeMicroseconds(pos);
+    motor.writeMicroseconds(pos);
     Serial.println(pos);
     delay(10);
   }

@@ -5,14 +5,22 @@
 #include <avr/wdt.h>
 
 #define STEERING_PIN 7
+
+/* Direcao com angulo reduzido
 #define STEERING_MIN_MS 1772
 #define STEERING_CENTER_MS 1412
 #define STEERING_MAX_MS 1070
 #define STEERING_STOP_MS 1412
+*/
+
+// Direcao maxima
+#define STEERING_MIN_MS 1800
+#define STEERING_CENTER_MS 1412
+#define STEERING_MAX_MS 1024
+#define STEERING_STOP_MS 1412 
 
 #define MOTOR_PIN 8
-#define MOTOR_MIN_MS 904
-#define MOTOR_CENTER_MS 1448
+#define MOTOR_MIN_MS 1500
 #define MOTOR_MAX_MS 1676
 #define MOTOR_STOP_MS 904
 

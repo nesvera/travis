@@ -23,7 +23,12 @@ void Motor::setAcceleration(float accel_value){
 
   // acceleration range -1 (brake/reverse) -> 1 (forward)
   // multiply for 100 to work with integers
-  int microseconds_value = map((this->acceleration*100), -100, 100, this->microseconds_min, this->microseconds_max);
+  int microseconds_value = this->microseconds_stop;
+  if( accel_value > 0){
+    microseconds_value = map((this->acceleration*100), 0, 100, this->microseconds_min, this->microseconds_max);
+  }else{
+    microseconds_value = map((this->acceleration*100), -100, 0, this->microseconds_stop, this->microseconds_min);
+  }
 
   this->motor->writeMicroseconds(microseconds_value);
   
