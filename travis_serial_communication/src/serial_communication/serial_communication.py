@@ -62,7 +62,7 @@ class SerialCommunication:
         #self.serialComm.reset_input_buffer()
 
         receivedMsg = self.serialComm.read_until('*')
-        print(receivedMsg)
+        #print(receivedMsg)
 
         return 
 

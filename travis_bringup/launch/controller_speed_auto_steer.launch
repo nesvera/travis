@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="max_speed" default="1" />
+  <arg name="max_steering" default="1" />
+  <arg name="homography_file"
+        default="$(find travis_image_processing)/src/homography/data/homography.json" />
+
+  <!-- Start communication with xbox controller -->
+  <node pkg="joy" type="joy_node" name="joy_node" />
+
+  <node pkg="travis_usb_controller" type="xbox_controller.py" name="travis_usb_controller" 
+        args="$(arg max_speed) $(arg max_steering)" output="screen" />
+  
+  <node pkg="travis_serial_communication" type="serial_comm.py" name="travis_serial_communication"
+        output="screen" />
+
+  <!-->
+  <include file="$(find usb_cam)/launch/travis_cam.launch"/>
+      -->
+
+  <!-- Run script -->
+  <node   pkg="travis_image_processing"
+          type="lane_detection.py"
+          name="lane_detection"
+          output="screen"
+          args="$(arg homography_file)"
+  />
+
+</launch>

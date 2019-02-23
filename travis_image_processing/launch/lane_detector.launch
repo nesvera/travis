@@ -3,12 +3,12 @@
 
     <arg name="homography_file"
         default="$(find travis_image_processing)/src/homography/data/homography.json"
-    \>
+    />
 
     <!-- Run script -->
     <node   pkg="travis_image_processing"
-            type="lane_detector.py"
-            name="lane_detector"
+            type="lane_detection.py"
+            name="lane_detection"
             output="screen"
             args="$(arg homography_file)"
     />

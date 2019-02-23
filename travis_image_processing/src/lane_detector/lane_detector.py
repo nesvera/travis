@@ -7,6 +7,7 @@ import time
 import pickle
 import random
 import copy
+from collections import deque
 
 from homography import Homography
 
@@ -108,6 +109,11 @@ class LaneDetector():
     POS_ON_ROAD_LEFT = 2
     POS_OFF_ROAD_LEFT = 3
 
+    ROAD_NOT_FOUND = 0
+    ROAD_UNKOWN = 1
+    ROAD_1_WAY = 2
+    ROAD_2_WAY = 3
+
     def __init__(self, homography_file, filter_file, tune_param ):
 
         self.bridge = CvBridge()
@@ -156,6 +162,8 @@ class LaneDetector():
 
         self.lanes_list = None
 
+        self.fps_buffer = deque(maxlen=10)
+
     def debug(self):
     
         while True:
@@ -171,11 +179,17 @@ class LaneDetector():
 
                     f = lane.get_function()
 
-                    for j in range(self.filter_param.roi_0_y, self.filter_param.roi_1_y):
+                    #for j in range(self.filter_param.roi_0_y, self.filter_param.roi_1_y):
                     #for j in range(0, 399):
-                        x = int(f(j))
-                        y = j
-                        cv2.circle(self.warp_res, (x, y), 3, 0, 1)
+                    #    x = int(f(j))
+                    #    y = j
+                    #    cv2.circle(self.warp_res, (x, y), 3, 0, 1)
+
+                    points = lane.get_points()
+
+                    for p in points:
+                        cv2.circle(self.warp_res, (p[0], p[1]), 3, 0, 1)
+
 
                 cv2.rectangle(self.warp_res, 
                                 (self.filter_param.roi_0_x, self.filter_param.roi_0_y),
@@ -224,7 +238,7 @@ class LaneDetector():
         # delete small lanes
         for lane in self.lanes_list:
 
-            if lane.get_len_point() > 15:
+            if lane.get_len_point() > 10:
                 good_lanes.append(lane)
 
         self.lanes_list = good_lanes
@@ -237,11 +251,11 @@ class LaneDetector():
 
         num_lanes = len(self.lanes_list)
         if num_lanes == 0:
-            lane_status.lane_type = 0
+            lane_status.lane_type = self.ROAD_NOT_FOUND
             return lane_status
 
         elif num_lanes == 1:
-            lane_status.lane_type = 255
+            lane_status.lane_type = self.ROAD_UNKOWN
 
             lane = self.lanes_list[0]
             lane.distance_y()
@@ -265,7 +279,7 @@ class LaneDetector():
             #print(img_w_center-x_react_point)
 
             # left side, off the road
-            if angle <= 80 and angle >= 0:
+            if angle <= 85 and angle >= 0:
                
                 lane_status.lane_type = 0
 
@@ -279,7 +293,7 @@ class LaneDetector():
 
                 print("direeeeeeeeeeeeeeeeeeeeeeeita")
             
-            elif  angle >= -80 and angle <= 0:
+            elif  angle >= -85 and angle <= 0:
                 lane_status.lane_type = 0
 
                 s_angle = -(90 + angle)
@@ -293,6 +307,9 @@ class LaneDetector():
                 print("esqueeeeeeeeeeeeeeeeeeeerda")
 
             else:
+                lane_status.lane_type = 0
+                lane_status.lane_curvature = 0
+                lane_status.lane_offset = 0
 
                 print("reeeeeto")
                 pass
@@ -370,7 +387,15 @@ class LaneDetector():
 
         periodo = time.time() - start
         fps = 1/periodo
-        #print("FPS: " + str(fps))
+
+        self.fps_buffer.append(fps)
+
+        sum_fps = sum(self.fps_buffer)/len(self.fps_buffer)
+
+        print("FPS: " + str(sum_fps))
+
+
+        return lane_status
 
             
 
@@ -564,7 +589,7 @@ class Parameters:
         self.roi_1_y = 0
 
         self.search_box_w = 50
-        self.search_box_h = 5
+        self.search_box_h = 10
 
         self.file = file
 

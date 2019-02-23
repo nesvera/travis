@@ -15,12 +15,13 @@ from lane_detector import LaneDetector
 def image_callback(data):
     lane_status = lane_detector.process(data)
 
-    #print(lane_status.lane_offset)
+    lane_status_pub.publish(lane_status)
+
 
 if __name__ == "__main__":
-    
+
     rospy.init_node('lane_detection')
-    rospy.loginfo("Starting land_detection.py")
+    rospy.loginfo("Starting lane_detection.py")
 
     if len(sys.argv) < 2:
         rospy.loginfo("Error in lane_detection")
@@ -30,7 +31,7 @@ if __name__ == "__main__":
     homography_file = sys.argv[1]
     #filter_file = "/home/nesvera/catkin_ws/src/travis/travis_image_processing/src/lane_detector/data/default.travis"
     filter_file = "/home/taura/catkin_ws/src/travis/travis_image_processing/src/lane_detector/data/lane.travis"
-    debug = 1
+    debug = 1   
 
     global lane_detector
     lane_detector = LaneDetector(homography_file, filter_file, debug)
@@ -41,7 +42,7 @@ if __name__ == "__main__":
     lane_status_pub = rospy.Publisher("/travis/lane_info", LaneInfo, queue_size=1)
 
     # Subscriber
-    rospy.Subscriber("/camera/image_raw/compressed", CompressedImage, image_callback)
+    rospy.Subscriber("/camera/image_raw/compressed", CompressedImage, image_callback, queue_size=1)
 
     if debug == 1:
         lane_detector.debug()
