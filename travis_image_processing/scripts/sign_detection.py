@@ -11,37 +11,42 @@ import cv2
 
 from traffic_sign_detector import SignDetector
 
+from travis_msg.msg import SignsDetected
+
 def image_callback(data):
 
     # convert received image to BGR
-    #image = bridge.compressed_imgmsg_to_cv2(data, "bgr8")
+    image = bridge.compressed_imgmsg_to_cv2(data, "bgr8")
 
-    sign_detector.process(data)
+    sings_detected = sign_detector.process(image)
+
+    sign_status_pub.publish(sings_detected)
 
 if __name__ == "__main__":
     
     rospy.init_node('sign_detection')
     rospy.loginfo("Starting sign_detection.py")
 
+    debug = 1
+
     global sign_detector
-    sign_detector = SignDetector(8, True)
-
-    image = None
-
-    img_sub = rospy.Subscriber("/camera/image_raw/compressed", CompressedImage, image_callback)
-
-    #rospy.spin()
+    sign_detector = SignDetector(0.08)
 
     bridge = CvBridge()
-    rate = rospy.Rate(30)
+
+    # Publisher
+    sign_status_pub = rospy.Publisher("/travis/sign_detected", SignsDetected, queue_size=1)
+
+    # Subscriber
+    rospy.Subscriber("/camera/image_raw/compressed", CompressedImage, image_callback)
 
     #image = cv2.imread("/home/nesvera/image_test.jpg", cv2.IMREAD_COLOR)
     cap = cv2.VideoCapture(0)
 
-    while True:
-        ret, image = cap.read()
-        sign_detector.process(image.copy())
+    if debug == 1:
+        sign_detector.debug()
 
-        rate.sleep()
+    else:
+        rospy.spin()
 
 

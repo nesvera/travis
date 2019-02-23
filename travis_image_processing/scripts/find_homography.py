@@ -88,12 +88,21 @@ if __name__ == "__main__":
         [000.0, 600.0]]
     '''
 
+    ''' 
+    #Gazebo
     # set world points
     world_points = [
         [-200.0, 800.0],
         [200.0, 800.0],
         [200.0, 600.0],
         [-200.0, 600.0]]
+    '''
+
+    world_points = [
+        [-200.0, 900.0],
+        [200.0, 900.0],
+        [200.0, 700.0],
+        [-200.0, 700.0]]
 
     homography.set_world_points(world_points)
 

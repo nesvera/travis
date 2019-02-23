@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+
+  <remap from="usb_cam/image_raw/compressed" to="camera/image_raw/compressed" />
+  <include file="$(find usb_cam)/launch/travis_cam.launch"/>
+
+</launch>
