@@ -40,9 +40,6 @@ if __name__ == "__main__":
     # Subscriber
     rospy.Subscriber("/camera/image_raw/compressed", CompressedImage, image_callback)
 
-    #image = cv2.imread("/home/nesvera/image_test.jpg", cv2.IMREAD_COLOR)
-    cap = cv2.VideoCapture(0)
-
     if debug == 1:
         sign_detector.debug()
 
