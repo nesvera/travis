@@ -29,9 +29,9 @@ if __name__ == "__main__":
         exit(1)
 
     homography_file = sys.argv[1]
-    #filter_file = "/home/nesvera/catkin_ws/src/travis/travis_image_processing/src/lane_detector/data/default.travis"
-    filter_file = "/home/taura/catkin_ws/src/travis/travis_image_processing/src/lane_detector/data/lane.travis"
-    debug = 1   
+    filter_file = "/home/nesvera/catkin_ws/src/travis/travis_image_processing/src/lane_detector/data/default.travis"
+    #filter_file = "/home/taura/catkin_ws/src/travis/travis_image_processing/src/lane_detector/data/lane.travis"
+    debug = 0
 
     global lane_detector
     lane_detector = LaneDetector(homography_file, filter_file, debug)

@@ -83,7 +83,7 @@ class Control:
 
     def routine(self):
 
-        rate = rospy.Rate(15)
+        rate = rospy.Rate(10)
         
         # state machine
         while True:

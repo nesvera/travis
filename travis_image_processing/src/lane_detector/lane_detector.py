@@ -256,6 +256,7 @@ class LaneDetector():
 
         elif num_lanes == 1:
             lane_status.lane_type = self.ROAD_UNKOWN
+            #print("1 lane")
 
             lane = self.lanes_list[0]
             lane.distance_y()
@@ -263,20 +264,11 @@ class LaneDetector():
             max_p = lane.get_min_vertical()
             min_p = lane.get_max_vertical()
 
-            #print(min_p, max_p)
-
             m_coef = -(min_p[1]-max_p[1])/float((min_p[0]-max_p[0]))
             angle = np.arctan(m_coef)*180/np.pi
 
-            #print(min_p, max_p)
-            print("angle: " + str(angle))
-            #raw_input()
-
             x_react_point = min_p[0]
             y_react_point = max_p[1]
-
-            #print(x_react_point, y_react_point)
-            #print(img_w_center-x_react_point)
 
             # left side, off the road
             if angle <= 85 and angle >= 0:
@@ -289,9 +281,8 @@ class LaneDetector():
                 lane_status.lane_curvature = s_angle
                 lane_status.lane_offset = s_angle + s_offset
 
-                print(lane_status.lane_offset)
-
-                print("direeeeeeeeeeeeeeeeeeeeeeeita")
+                #print(lane_status.lane_offset)
+                #print("direeeeeeeeeeeeeeeeeeeeeeeita")
             
             elif  angle >= -85 and angle <= 0:
                 lane_status.lane_type = 0
@@ -302,22 +293,25 @@ class LaneDetector():
                 lane_status.lane_curvature = s_angle
                 lane_status.lane_offset = s_angle + s_offset
 
-                print(lane_status.lane_offset)
-
-                print("esqueeeeeeeeeeeeeeeeeeeerda")
+                #print(lane_status.lane_offset)
+                #print("esqueeeeeeeeeeeeeeeeeeeerda")
 
             else:
                 lane_status.lane_type = 0
                 lane_status.lane_curvature = 0
                 lane_status.lane_offset = 0
 
-                print("reeeeeto")
-                pass
+                #print("reeeeeto")
+
+            #print(lane_status.lane_curvature)
 
         elif num_lanes == 2:
             lane_status.lane_type = 1
+            #print("2 lane")
 
             angle_list = []
+            angle_list_abs = []
+
             x_lane_position = 0
 
             for lane in self.lanes_list:
@@ -329,20 +323,29 @@ class LaneDetector():
                 max_p = lane.get_min_vertical()
                 min_p = lane.get_max_vertical()
 
-                #print(min_p, max_p)
-
                 m_coef = -(min_p[1]-max_p[1])/float((min_p[0]-max_p[0]))
                 angle = np.arctan(m_coef)*180/np.pi
 
-                angle_list.append(abs(angle))
+                angle_list.append(angle)
+                angle_list_abs.append(abs(angle))
 
-            lane_status.lane_curvature = min(angle_list)
+            min_ang = min(angle_list_abs)
+            rand_angle = angle_list[0]
+
+            if rand_angle > 0:
+                min_ang = 90 - min_ang
+
+            else:
+                min_ang = min_ang - 90
+
+            lane_status.lane_curvature = min_ang
             lane_status.lane_offset = ((x_lane_position)/2.0) - img_w_center
 
-            print(lane_status.lane_offset)
+            #print(lane_status.lane_curvature)
 
         elif num_lanes == 3:
             lane_status.lane_type = 2
+            #print("3 lanes")
 
             good_lanes = []
 
@@ -357,6 +360,7 @@ class LaneDetector():
             good_lanes.append(self.lanes_list[-1])  
 
             angle_list = []
+            angle_list_abs = []
             x_lane_position = 0
 
             for lane in good_lanes:
@@ -373,31 +377,87 @@ class LaneDetector():
                 m_coef = -(min_p[1]-max_p[1])/float((min_p[0]-max_p[0]))
                 angle = np.arctan(m_coef)*180/np.pi
 
-                angle_list.append(abs(angle))
+                angle_list.append(angle)
+                angle_list_abs.append(abs(angle))
 
-            lane_status.lane_curvature = min(angle_list)
+            min_ang = min(angle_list_abs)
+            rand_angle = angle_list[0]
+
+            if rand_angle > 0:
+                min_ang = 90 - min_ang
+
+            else:
+                min_ang = min_ang - 90
+
+            lane_status.lane_curvature = min_ang
             lane_status.lane_offset = ((x_lane_position)/2.0) - img_w_center
 
-            print(lane_status.lane_offset)                  
+            #print(lane_status.lane_curvature)                  
 
 
         elif num_lanes == 4:
             lane_status.lane_type = 2
-                        
+            #print("4 lanes")
+
+            good_lanes = []
+
+            for i in range(len(self.lanes_list)-1):
+
+                f1 = self.lanes_list[i].get_function()
+                f2 = self.lanes_list[i+1].get_function()
+
+                if abs(f1(self.filter_param.roi_1_y) - f2(self.filter_param.roi_1_y)) > 10:
+                    good_lanes.append(self.lanes_list[i])
+
+            good_lanes.append(self.lanes_list[-1])
+
+            angle_list = []
+            angle_list_abs = []
+            x_lane_position = 0
+
+            for lane in good_lanes:
+                lane.distance_y()
+
+                f = lane.get_function()
+                x_lane_position += f(self.filter_param.roi_1_y)
+
+                max_p = lane.get_min_vertical()
+                min_p = lane.get_max_vertical()
+
+                m_coef = -(min_p[1]-max_p[1])/float((min_p[0]-max_p[0]))
+                angle = np.arctan(m_coef)*180/np.pi
+
+                angle_list.append(angle)
+                angle_list_abs.append(abs(angle))
+
+            min_ang = min(angle_list_abs)
+            rand_angle = angle_list[0]
+
+            if rand_angle > 0:
+                min_ang = 90 - min_ang
+
+            else:
+                min_ang = min_ang - 90
+
+            lane_status.lane_curvature = min_ang
+            lane_status.lane_offset = ((x_lane_position)/2.0) - img_w_center
+
+            #print(lane_status.lane_curvature)
+
+        else:
+            lane_status.lane_type = self.ROAD_NOT_FOUND
+            lane_status.lane_curvature = 0
+            lane_status.lane_offset = 0
+
 
         periodo = time.time() - start
         fps = 1/periodo
-
         self.fps_buffer.append(fps)
-
         sum_fps = sum(self.fps_buffer)/len(self.fps_buffer)
 
         print("FPS: " + str(sum_fps))
 
-
         return lane_status
-
-            
 
     def filter(self, image):
 
